@@ -8,5 +8,8 @@ lazy val root = project
 
     scalaVersion := scala3Version,
 
-    libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % "test"
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client3" %% "core" % "3.3.0-RC1",
+      "com.novocode" % "junit-interface" % "0.11" % "test"
+    )
   )
