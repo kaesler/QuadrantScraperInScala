@@ -26,6 +26,8 @@ trait Quadrant[F[_]] {
       session: Session
   ): F[List[Uri]]
 
+  def pdfs(uri: Uri): F[List[Uri]]
+
   def pdfs(session: Session): F[List[Uri]]
 }
 
@@ -82,6 +84,13 @@ object Quadrant {
           }
           .map(_.flatten)
 
+      override def pdfs(uri: Uri): F[List[Uri]] =
+        for {
+          response <- basicRequest.get(uri).send(backend)
+          htmlText <- Sync[F].fromEither(response.body.leftMap(new Exception(_)))
+          pdfLinks <- extractPdfLinks(htmlText)
+        } yield pdfLinks
+
       override def pdfs(
           session: Session
       ): F[List[Uri]] = ???
@@ -94,8 +103,14 @@ object Quadrant {
       elt.attr("value")
     }
 
-  private def extractPdfLinks[F[_]: Sync](html: String): F[List[String]] =
-    extractLinks[F](html).map(_.filter(_.endsWith(".pdf")))
+  private def extractPdfLinks[F[_]: Sync](html: String): F[List[Uri]] =
+    extractLinks[F](html)
+      .map(
+        _.filter { href =>
+          href.endsWith(".pdf") || href.endsWith(".PDF")
+        }
+      )
+      .map { _.map(homePage.withWholePath) }
 
   private def extractLinks[F[_]: Sync](html: String): F[List[String]] =
     Sync[F].delay {

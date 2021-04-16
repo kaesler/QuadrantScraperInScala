@@ -22,8 +22,16 @@ object Main extends IOApp {
       _ <- IO.println(session)
 
       pages <- q.existingScrapeablePages(session)
-      _ <- IO.println(
-        pages.mkString("\n")
-      )
+//      _ <- IO.println(
+//        pages.mkString("\n")
+//      )
+
+      pdfLists <- pages.traverse(q.pdfs)
+      pdfs = pdfLists.flatten
+
+      _ <- IO.println(pdfs.size)
+      _ <- IO.println(pdfs.mkString("\n"))
+
+      _ <- backend.close()
     } yield ExitCode.Success
 }
