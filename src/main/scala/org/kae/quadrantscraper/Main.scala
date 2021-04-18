@@ -5,33 +5,15 @@ import cats.implicits._
 import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
 
 object Main extends IOApp {
-
   override def run(args: List[String]): IO[ExitCode] =
     for {
       backend <- AsyncHttpClientCatsBackend[IO]()
       q = Quadrant.create(backend)
-
-      nonce <- q.nonce
-      _     <- IO.println(nonce)
-
-      session <- q.session(
-        "kevin.esler@gmail.com",
-        "karakatana",
-        nonce
-      )
-      _ <- IO.println(session)
-
-      pages <- q.existingScrapeablePages(session)
-//      _ <- IO.println(
-//        pages.mkString("\n")
-//      )
-
-      pdfLists <- pages.traverse(q.pdfs)
-      pdfs = pdfLists.flatten
-
-      _ <- IO.println(pdfs.size)
-      _ <- IO.println(pdfs.mkString("\n"))
-
-      _ <- backend.close()
+      nonce    <- q.nonce
+      username <- IO.print("Username: ") *> IO.readLine
+      password <- IO.print("Password: ") *> IO.readLine
+      session  <- q.session(username, password, nonce)
+      _        <- q.pdfsInSite(session).evalTap(IO.println).compile.drain
+      _        <- backend.close()
     } yield ExitCode.Success
 }
