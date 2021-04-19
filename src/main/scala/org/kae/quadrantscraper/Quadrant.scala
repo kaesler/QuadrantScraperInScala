@@ -41,6 +41,12 @@ object Quadrant {
 
   final case class Session(cookies: NonEmptyList[CookieWithMeta]) extends AnyVal
 
+  sealed trait Error            extends Throwable
+  case object HomePageGetFailed extends Error
+  case object LoginPostFailed   extends Error
+  case object NoCookies         extends Error
+  case object DownloadFailed    extends Error
+
   def resource[F[_]: Sync]: Resource[F, Quadrant[F]] = ???
 
   def create[F[_]: Sync](backend: SttpBackend[F, Any]): Quadrant[F] =
@@ -50,7 +56,7 @@ object Quadrant {
           response <- basicRequest
             .get(homePage)
             .send(backend)
-            .ensure(new Exception("Home Page Get failed)"))(_.code.isSuccess)
+            .ensure(HomePageGetFailed)(_.code.isSuccess)
           htmlText   <- Sync[F].fromEither(response.body.leftMap(new Exception(_)))
           loginNonce <- Quadrant.loginNonceInDoc[F](htmlText)
         } yield NonceForLogin(loginNonce)
@@ -71,13 +77,10 @@ object Quadrant {
               )
             )
             .send(backend)
-            .ensure(new Exception("login failed)"))(_.code.isSuccess)
+            .ensure(LoginPostFailed)(_.code.isSuccess)
 
           cookies = response.cookies.partitionMap(identity)._2.toList
-          cookiesNel <- Sync[F].fromOption(
-            NonEmptyList.fromList(cookies),
-            new Exception("no cookies")
-          )
+          cookiesNel <- Sync[F].fromOption(NonEmptyList.fromList(cookies), NoCookies)
         } yield Session(cookiesNel)
       }
 
@@ -97,7 +100,7 @@ object Quadrant {
           .response(asByteArrayAlways)
           .cookies(session.cookies.toList)
           .send(backend)
-          .ensure(new Exception("copy failed)"))(_.code.isSuccess)
+          .ensure(DownloadFailed)(_.code.isSuccess)
           .flatMap { response =>
             Sync[F]
               .delay(
