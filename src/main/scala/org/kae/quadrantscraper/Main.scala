@@ -13,7 +13,12 @@ object Main extends IOApp {
       username <- IO.print("Username: ") *> IO.readLine
       password <- IO.print("Password: ") *> IO.readLine
       session  <- q.session(username, password, nonce)
-      _        <- q.pdfsInSite(session).evalTap(IO.println).compile.drain
-      _        <- backend.close()
+      _ <- q
+        .pdfsInSite(session)
+        .evalTap(q.downloadPdf(session))
+        .evalTap(IO.println)
+        .compile
+        .drain
+      _ <- backend.close()
     } yield ExitCode.Success
 }

@@ -1,12 +1,12 @@
 package org.kae.quadrantscraper
 
-import scala.jdk.CollectionConverters._
-
 import cats.data.NonEmptyList
 import cats.effect.Resource
 import cats.effect.kernel.Sync
 import cats.implicits._
+import java.nio.file.{Files, Paths}
 import org.jsoup.Jsoup
+import scala.jdk.CollectionConverters._
 import sttp.model.Uri
 import sttp.model.headers.CookieWithMeta
 
@@ -28,6 +28,8 @@ trait Quadrant[F[_]] {
   def pdfsInSite(session: Session): fs2.Stream[F, Uri] =
     existingScrapeablePages(session)
       .flatMap(pdfsInPage(session))
+
+  def downloadPdf(session: Session)(uri: Uri): F[Unit]
 }
 
 object Quadrant {
@@ -89,6 +91,26 @@ object Quadrant {
           .fromIterator(scrapeablePages.iterator, 1)
           .evalFilter(pageExists(session, _))
 
+      override def downloadPdf(session: Session)(uri: Uri): F[Unit] =
+        basicRequest
+          .get(uri)
+          .response(asByteArrayAlways)
+          .cookies(session.cookies.toList)
+          .send(backend)
+          .ensure(new Exception("copy failed)"))(_.code.isSuccess)
+          .flatMap { response =>
+            Sync[F]
+              .delay(
+                Paths
+                  .get(System.getProperty("user.home"))
+                  .resolve("Downloads/QuadrantPdfs")
+                  .resolve(uri.pathSegments.segments.last.v)
+              )
+              .flatMap { targetPath =>
+                Sync[F].delay(Files.write(targetPath, response.body)).void
+              }
+          }
+
       private def pdfsInPageList(session: Session)(uri: Uri): F[List[Uri]] =
         for {
           response <- basicRequest
@@ -108,6 +130,7 @@ object Quadrant {
           .cookies(session.cookies.toList)
           .send(backend)
           .map(_.code.isSuccess)
+
     }
 
   private def loginNonceInDoc[F[_]: Sync](html: String): F[String] =
