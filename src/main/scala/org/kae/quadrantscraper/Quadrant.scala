@@ -16,9 +16,9 @@ trait Quadrant[F[_]] {
   def nonce: F[NonceForLogin]
 
   def session(
-      username: String,
-      password: String,
-      nonceForLogin: NonceForLogin
+    username: String,
+    password: String,
+    nonceForLogin: NonceForLogin
   ): F[Session]
 
   def existingScrapeablePages(session: Session): fs2.Stream[F, Uri]
@@ -56,9 +56,9 @@ object Quadrant {
         } yield NonceForLogin(loginNonce)
 
       override def session(
-          username: String,
-          password: String,
-          nonceForLogin: NonceForLogin
+        username: String,
+        password: String,
+        nonceForLogin: NonceForLogin
       ): F[Session] = {
         for {
           response <- basicRequest
@@ -82,7 +82,7 @@ object Quadrant {
       }
 
       override def pdfsInPage(session: Session)(
-          uri: Uri
+        uri: Uri
       ): fs2.Stream[F, Uri] =
         fs2.Stream.evalSeq(pdfsInPageList(session)(uri))
 
@@ -122,8 +122,8 @@ object Quadrant {
         } yield pdfLinks
 
       private def pageExists(
-          session: Session,
-          uri: Uri
+        session: Session,
+        uri: Uri
       ): F[Boolean] =
         basicRequest
           .head(uri)
