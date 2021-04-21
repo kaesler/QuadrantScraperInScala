@@ -148,9 +148,9 @@ object Quadrant {
   private def pdfLinksInDoc[F[_]: Sync](html: String): F[List[Uri]] =
     linksInDoc[F](html)
       .map(
-        _.filter { href => href.endsWith(".pdf") || href.endsWith(".PDF") }
+        _.filter(_.toLowerCase.endsWith(".pdf"))
+          .map(homePage.withWholePath)
       )
-      .map { _.map(homePage.withWholePath) }
 
   private def linksInDoc[F[_]: Sync](html: String): F[List[String]] =
     Sync[F].delay {
