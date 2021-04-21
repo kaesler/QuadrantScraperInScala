@@ -1,12 +1,13 @@
 package org.kae.quadrantscraper
 
 import cats.data.NonEmptyList
-import cats.effect.Resource
+import cats.effect.{Async, Resource}
 import cats.effect.kernel.Sync
 import cats.implicits._
 import java.nio.file.{Files, Paths}
 import org.jsoup.Jsoup
 import scala.jdk.CollectionConverters._
+import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import sttp.model.Uri
 import sttp.model.headers.CookieWithMeta
 
@@ -47,9 +48,13 @@ object Quadrant {
   case object NoCookies         extends Error
   case object DownloadFailed    extends Error
 
-  def resource[F[_]: Sync]: Resource[F, Quadrant[F]] = ???
+  def resource[F[_]: Async]: Resource[F, Quadrant[F]] =
+    for {
+      backend <- Resource.make(AsyncHttpClientCatsBackend[F]())(_.close())
+      q       <- Resource.liftK[F](create(backend).pure[F])
+    } yield q
 
-  def create[F[_]: Sync](backend: SttpBackend[F, Any]): Quadrant[F] =
+  private def create[F[_]: Sync](backend: SttpBackend[F, Any]): Quadrant[F] =
     new Quadrant[F] {
       override def nonce: F[NonceForLogin] =
         for {
