@@ -15,8 +15,8 @@ object Main extends IOApp {
       session  <- q.session(username, password, nonce)
       _ <- q
         .pdfsInSite(session)
-        //.evalTap(q.downloadPdf(session))
         .evalTap(IO.println)
+        .parEvalMapUnordered(4)(q.downloadPdf(session))
         .compile
         .drain
       _ <- backend.close()
