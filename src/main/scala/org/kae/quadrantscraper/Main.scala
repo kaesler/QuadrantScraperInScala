@@ -15,7 +15,7 @@ object Main extends IOApp {
       session  <- q.session(username, password, nonce)
       _ <- q
         .pdfsInSite(session)
-        .evalTap(q.downloadPdf(session))
+        //.evalTap(q.downloadPdf(session))
         .evalTap(IO.println)
         .compile
         .drain

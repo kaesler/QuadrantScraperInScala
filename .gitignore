@@ -40,3 +40,7 @@ build
 
 #general
 *.class
+
+# Mill
+out/
+
