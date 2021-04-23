@@ -5,10 +5,12 @@ import cats.effect.{Async, Resource}
 import cats.effect.kernel.Sync
 import cats.implicits._
 import java.nio.file.{Files, Paths}
+
 import org.jsoup.Jsoup
 import scala.jdk.CollectionConverters._
+
 import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
-import sttp.model.Uri
+import sttp.model.{Header, Uri}
 import sttp.model.headers.CookieWithMeta
 
 trait Quadrant[F[_]] {
@@ -38,6 +40,9 @@ object Quadrant {
 
   private val homePage = uri"https://quadrant.org.au/"
 
+  private val userAgentHeader = Header.userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) " +
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15")
+
   final case class NonceForLogin(s: String) extends AnyVal
 
   final case class Session(cookies: NonEmptyList[CookieWithMeta]) extends AnyVal
@@ -59,6 +64,7 @@ object Quadrant {
       override def nonce: F[NonceForLogin] =
         for {
           response <- basicRequest
+            .headers(userAgentHeader)
             .get(homePage)
             .send(backend)
             .ensure(HomePageGetFailed)(_.code.isSuccess)
@@ -73,6 +79,7 @@ object Quadrant {
       ): F[Session] = {
         for {
           response <- basicRequest
+            .headers(userAgentHeader)
             .post(homePage)
             .body(
               Map(
@@ -101,6 +108,7 @@ object Quadrant {
 
       override def downloadPdf(session: Session)(uri: Uri): F[Unit] =
         basicRequest
+          .headers(userAgentHeader)
           .get(uri)
           .response(asByteArrayAlways)
           .cookies(session.cookies.toList)
@@ -122,6 +130,7 @@ object Quadrant {
       private def pdfsInPageList(session: Session)(uri: Uri): F[List[Uri]] =
         for {
           response <- basicRequest
+            .headers(userAgentHeader)
             .get(uri)
             .cookies(session.cookies.toList)
             .send(backend)
