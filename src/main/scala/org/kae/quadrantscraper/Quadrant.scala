@@ -40,8 +40,10 @@ object Quadrant {
 
   private val homePage = uri"https://quadrant.org.au/"
 
-  private val userAgentHeader = Header.userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) " +
-    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15")
+  private val userAgentHeader = Header.userAgent(
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) " +
+      "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15"
+  )
 
   final case class NonceForLogin(s: String) extends AnyVal
 
