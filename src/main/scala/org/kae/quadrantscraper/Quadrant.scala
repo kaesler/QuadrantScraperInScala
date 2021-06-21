@@ -1,20 +1,19 @@
 package org.kae.quadrantscraper
 
 import cats.data.NonEmptyList
-import cats.effect.{Async, Resource}
 import cats.effect.kernel.Sync
-import cats.implicits._
+import cats.effect.{Async, Resource}
+import cats.implicits.*
 import java.nio.file.{Files, Paths}
-
 import org.jsoup.Jsoup
-import scala.jdk.CollectionConverters._
-
+import scala.jdk.CollectionConverters.*
 import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
-import sttp.model.{Header, Uri}
 import sttp.model.headers.CookieWithMeta
+import sttp.model.{Header, Uri}
 
-trait Quadrant[F[_]] {
-  import Quadrant._
+trait Quadrant[F[_]]:
+
+  import Quadrant.*
 
   def nonce: F[NonceForLogin]
 
@@ -33,10 +32,11 @@ trait Quadrant[F[_]] {
       .flatMap(pdfsInPage(session))
 
   def downloadPdf(session: Session)(uri: Uri): F[Unit]
-}
+end Quadrant
 
-object Quadrant {
-  import sttp.client3._
+object Quadrant:
+
+  import sttp.client3.*
 
   private val homePage = uri"https://quadrant.org.au/"
 
@@ -49,37 +49,46 @@ object Quadrant {
 
   final case class Session(cookies: NonEmptyList[CookieWithMeta]) extends AnyVal
 
-  sealed trait Error            extends Throwable
+  sealed trait Error extends Throwable
+
   case object HomePageGetFailed extends Error
-  case object LoginPostFailed   extends Error
-  case object NoCookies         extends Error
-  case object DownloadFailed    extends Error
+
+  case object LoginPostFailed extends Error
+
+  case object NoCookies extends Error
+
+  case object DownloadFailed extends Error
 
   def resource[F[_]: Async]: Resource[F, Quadrant[F]] =
-    for {
+    for
       backend <- Resource.make(AsyncHttpClientCatsBackend[F]())(_.close())
       q       <- Resource.liftK[F](create(backend).pure[F])
-    } yield q
+    yield q
 
   private def create[F[_]: Sync](backend: SttpBackend[F, Any]): Quadrant[F] =
     new Quadrant[F] {
       override def nonce: F[NonceForLogin] =
-        for {
+        for
           response <- basicRequest
             .headers(userAgentHeader)
             .get(homePage)
             .send(backend)
             .ensure(HomePageGetFailed)(_.code.isSuccess)
-          htmlText   <- Sync[F].fromEither(response.body.leftMap(new Exception(_)))
+          htmlText <- Sync[F].fromEither(
+            response.body
+              .leftMap(new Exception(_))
+          )
           loginNonce <- Quadrant.loginNonceInDoc[F](htmlText)
-        } yield NonceForLogin(loginNonce)
+        yield {
+          NonceForLogin(loginNonce)
+        }
 
       override def session(
         username: String,
         password: String,
         nonceForLogin: NonceForLogin
-      ): F[Session] = {
-        for {
+      ): F[Session] =
+        for
           response <- basicRequest
             .headers(userAgentHeader)
             .post(homePage)
@@ -95,8 +104,7 @@ object Quadrant {
 
           cookies = response.cookies.partitionMap(identity)._2.toList
           cookiesNel <- Sync[F].fromOption(NonEmptyList.fromList(cookies), NoCookies)
-        } yield Session(cookiesNel)
-      }
+        yield Session(cookiesNel)
 
       override def pdfsInPage(session: Session)(
         uri: Uri
@@ -130,15 +138,18 @@ object Quadrant {
           }
 
       private def pdfsInPageList(session: Session)(uri: Uri): F[List[Uri]] =
-        for {
+        for
           response <- basicRequest
             .headers(userAgentHeader)
             .get(uri)
             .cookies(session.cookies.toList)
             .send(backend)
-          htmlText <- Sync[F].fromEither(response.body.leftMap(new Exception(_)))
+          htmlText <- Sync[F].fromEither(
+            response.body
+              .leftMap(new Exception(_))
+          )
           pdfLinks <- pdfLinksInDoc(htmlText)
-        } yield pdfLinks
+        yield pdfLinks
 
       private def pageExists(
         session: Session,
@@ -149,7 +160,6 @@ object Quadrant {
           .cookies(session.cookies.toList)
           .send(backend)
           .map(_.code.isSuccess)
-
     }
 
   private def loginNonceInDoc[F[_]: Sync](html: String): F[String] =
@@ -169,7 +179,7 @@ object Quadrant {
       )
 
   private def linksInDoc[F[_]: Sync](html: String): F[List[String]] =
-    Sync[F].delay {
+    Sync[F].delay(
       Jsoup
         .parse(html)
         .select("a[href]")
@@ -177,15 +187,17 @@ object Quadrant {
         .map(_.attr("href"))
         .filter(_.nonEmpty)
         .toList
-    }
+    )
 
-  private def scrapeablePages = for {
-    year  <- (2013 to 2021).toList
-    month <- 1 to 12
-  } yield scrapeablePage(year, month)
+  private def scrapeablePages =
+    for
+      year  <- (2013 to 2021).toList
+      month <- 1 to 12
+    yield scrapeablePage(year, month)
 
   private def scrapeablePage(year: Int, month: Int) =
     homePage.withWholePath(
       s"wp-content/uploads/$year/${month.formatted("%02d")}/"
     )
-}
+
+end Quadrant
