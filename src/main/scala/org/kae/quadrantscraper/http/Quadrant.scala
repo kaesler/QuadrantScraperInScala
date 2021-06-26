@@ -1,4 +1,4 @@
-package org.kae.quadrantscraper
+package org.kae.quadrantscraper.http
 
 import cats.data.NonEmptyList
 import cats.effect.kernel.Sync
@@ -6,6 +6,7 @@ import cats.effect.{Async, Resource}
 import cats.implicits.*
 import java.nio.file.{Files, Paths}
 import org.jsoup.Jsoup
+import org.typelevel.log4cats.Logger
 import scala.jdk.CollectionConverters.*
 import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import sttp.model.headers.CookieWithMeta
@@ -59,14 +60,16 @@ object Quadrant:
 
   case object DownloadFailed extends Error
 
-  def resource[F[_]: Async]: Resource[F, Quadrant[F]] =
+  def resource[F[_]: Async: Logger]: Resource[F, Quadrant[F]] =
     for
       backend <- Resource.make(AsyncHttpClientCatsBackend[F]())(_.close())
       q       <- Resource.liftK[F](create(backend).pure[F])
     yield q
 
-  private def create[F[_]: Sync](backend: SttpBackend[F, Any]): Quadrant[F] =
+  private def create[F[_]: Sync: Logger](backend: SttpBackend[F, Any]): Quadrant[F] =
     new Quadrant[F] {
+      private val logger = summon[Logger[F]]
+
       override def nonce: F[NonceForLogin] =
         for
           response <- basicRequest
@@ -79,9 +82,7 @@ object Quadrant:
               .leftMap(new Exception(_))
           )
           loginNonce <- Quadrant.loginNonceInDoc[F](htmlText)
-        yield {
-          NonceForLogin(loginNonce)
-        }
+        yield NonceForLogin(loginNonce)
 
       override def session(
         username: String,
@@ -148,18 +149,22 @@ object Quadrant:
             response.body
               .leftMap(new Exception(_))
           )
+          _        <- logger.info(htmlText)
           pdfLinks <- pdfLinksInDoc(htmlText)
+          _        <- logger.info(pdfLinks.toString)
         yield pdfLinks
 
       private def pageExists(
         session: Session,
         uri: Uri
-      ): F[Boolean] =
-        basicRequest
-          .head(uri)
-          .cookies(session.cookies.toList)
-          .send(backend)
-          .map(_.code.isSuccess)
+      ): F[Boolean] = {
+        logger.info(uri.toString) *>
+          basicRequest
+            .head(uri)
+            .cookies(session.cookies.toList)
+            .send(backend)
+            .map(_.code.isSuccess)
+      }
     }
 
   private def loginNonceInDoc[F[_]: Sync](html: String): F[String] =
@@ -189,15 +194,20 @@ object Quadrant:
         .toList
     )
 
-  private def scrapeablePages =
-    for
-      year  <- (2013 to 2021).toList
-      month <- 1 to 12
-    yield scrapeablePage(year, month)
+  def scrapeablePages =
+    for year <- (2013 to 2021).toList
+    yield {
+      val res = scrapeablePage(year)
+      println(res.toString)
+      res
+    }
 
   private def scrapeablePage(year: Int, month: Int) =
     homePage.withWholePath(
       s"wp-content/uploads/$year/${month.formatted("%02d")}/"
     )
+
+  private def scrapeablePage(year: Int) =
+    homePage.withWholePath(s"magazine/$year")
 
 end Quadrant
