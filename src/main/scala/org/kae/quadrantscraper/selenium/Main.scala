@@ -11,7 +11,7 @@ import scala.jdk.CollectionConverters.*
 object Main extends IOApp:
   given Logger[IO] = Slf4jLogger.getLogger[IO]
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run(args: List[String]): IO[ExitCode] =
     for
       username <- IO.print("Username: ") *> IO.readLine
       password <- IO.print("Password: ") *> IO.readLine
@@ -19,7 +19,6 @@ object Main extends IOApp:
       _        <- IO.println(map)
     // TODO: download
     yield ExitCode.Success
-  }
 
 // Next:
 //  - Downloader: fetches them and stores them

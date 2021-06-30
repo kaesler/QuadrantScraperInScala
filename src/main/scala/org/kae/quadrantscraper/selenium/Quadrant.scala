@@ -61,11 +61,11 @@ object Quadrant:
       new Quadrant[F] {
         val logger = summon[Logger[F]]
 
-        override def pdfsForYear(year:  Year): F[Set[Uri]] = {
+        override def pdfsForYear(year:  Year): F[Set[Uri]] =
+          logger.info(s"Examining year $year") *>
           summon[Sync[F]].delay {
-            logger.info(s"Examining year $year")
             driver.get(s"https://quadrant.org.au/magazine/$year")
-            Thread.sleep(2000)
+            Thread.sleep(500)
             // val src = driver.getPageSource
             // println(src)
             driver
@@ -76,7 +76,6 @@ object Quadrant:
               .flatMap(s => Uri.parse(s).toOption)
               .toSet
           }
-        }
       }.pure[F]
 
   private def login[F[_]: Sync: Logger](
