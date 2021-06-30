@@ -2,18 +2,24 @@ package org.kae.quadrantscraper.selenium
 
 import cats.effect.{ExitCode, IO, IOApp}
 import cats.implicits.*
-import org.openqa.selenium.chrome.ChromeDriver
+import org.openqa.selenium.By
+import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
+import scala.jdk.CollectionConverters.*
 
 object Main extends IOApp:
   given Logger[IO] = Slf4jLogger.getLogger[IO]
 
-  override def run(args: List[String]): IO[ExitCode] =
-    IO(doStuff()) *>
-      ExitCode.Success.pure[IO]
+  override def run(args: List[String]): IO[ExitCode] = {
+    for
+      username <- IO.print("Username: ") *> IO.readLine
+      password <- IO.print("Password: ") *> IO.readLine
+      map      <- Quadrant.resource[IO](username, password).use(_.pdfsByYear)
+      _        <- IO.println(map)
+    // TODO: download
+    yield ExitCode.Success
+  }
 
-  private def doStuff(): Unit =
-    val driver = ChromeDriver()
-    driver.get("http://www.google.com/")
-    Thread.sleep(5000)
+// Next:
+//  - Downloader: fetches them and stores them
