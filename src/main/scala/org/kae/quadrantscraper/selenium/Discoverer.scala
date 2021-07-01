@@ -3,46 +3,48 @@ package org.kae.quadrantscraper.selenium
 import cats.Applicative
 import cats.effect.{Async, Resource, Sync}
 import cats.implicits.*
+import java.nio.file.Files
 import java.time.Year
 import org.openqa.selenium.By
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
 import org.typelevel.log4cats.Logger
 import scala.jdk.CollectionConverters.*
-import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import sttp.model.Uri
 
-trait Quadrant[F[_] : Applicative]:
-  def pdfsForYear(year: Year): F[Set[Uri]]
+/**
+ * Discovers what documents are available and their URIs.
+ * @tparam F the effect
+ */
+trait Discoverer[F[_] : Applicative]:
+  def docsForYear(year: Year): F[Set[Uri]]
 
-  def pdfsByYear: F[Map[Year, Set[Uri]]] =
-    val years = (Quadrant.firstYear to Year.now().getValue)
+  def docsByYear: F[Map[Year, Set[Uri]]] =
+    val years = (Discoverer.firstYear to Year.now().getValue)
       .map(Year.of)
       .toList
     years
-      .traverse(pdfsForYear)
+      .traverse(docsForYear)
       .map(years.zip(_).toMap)
 
   def docUris: F[Map[DocId, Uri]] =
-    pdfsByYear.map { pairs =>
+    docsByYear.map { pairs =>
       for
         (year, uris) <- pairs
         uri <- uris.toList
         name = uri.pathSegments.segments.last.v
       yield (DocId(year, name), uri)
     }
-end Quadrant
 
-object Quadrant:
-  private val firstYear = 2019 // 1956
+end Discoverer
 
-  import sttp.client3.*
+object Discoverer:
+  private val firstYear = 1956
 
   def resource[F[_]: Async: Logger](
       username: String,
       password: String
-  ): Resource[F, Quadrant[F]] =
+  ): Resource[F, Discoverer[F]] =
     for
-      backend <- Resource.make(AsyncHttpClientCatsBackend[F]())(_.close())
       chromeDriver <- Resource.make(
         summon[Sync[F]].delay(
           ChromeDriver(
@@ -56,26 +58,23 @@ object Quadrant:
           )
         )
       )(driver => summon[Sync[F]].delay(driver.quit))
-      q       <- Resource.liftK[F](create[F](backend, chromeDriver, username, password))
+      q       <- Resource.liftK[F](create[F](chromeDriver, username, password))
     yield q
 
-  def create[F[*]: Sync: Logger](
-    backend: SttpBackend[F, Any],
+  private def create[F[*]: Sync: Logger](
     driver: ChromeDriver,
     username: String,
     password: String
-  ): F[Quadrant[F]] =
+  ): F[Discoverer[F]] =
     login[F](driver, username, password) *>
-      new Quadrant[F] {
+      new Discoverer[F] {
         val logger = summon[Logger[F]]
 
-        override def pdfsForYear(year:  Year): F[Set[Uri]] =
+        override def docsForYear(year:  Year): F[Set[Uri]] =
           logger.info(s"Examining year $year") *>
           summon[Sync[F]].delay {
             driver.get(s"https://quadrant.org.au/magazine/$year")
             Thread.sleep(200)
-            // val src = driver.getPageSource
-            // println(src)
             driver
               .findElements(By.tagName("a"))
               .asScala
@@ -104,3 +103,5 @@ object Quadrant:
       // TODO: do better by polling for the logged-in cookie
       Thread.sleep(1000)
     } *> summon[Logger[F]].info("Logged in")
+
+end Discoverer

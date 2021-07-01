@@ -9,16 +9,16 @@ import java.util.function.BiPredicate
 import scala.jdk.CollectionConverters.*
 
 trait DocRepo[F[_]]:
-  def pathFor(docId: DocId): Path
   def contents: F[Set[DocId]]
 end DocRepo
 
 object DocRepo:
   private val root: Path = File("/Users/kevinesler/Dropbox/Reading/Periodicals/Quadrant/").toPath
 
+  def pathFor(docId: DocId) =
+    root.resolve(s"${docId.year.toString}/${docId.name}")
+
   def create[F[_]: Sync]: DocRepo[F] = new DocRepo[F] {
-    override def pathFor(docId: DocId) =
-      root.resolve(s"${docId.year.toString}/${docId.name}")
 
     override def contents: F[Set[DocId]] =
       summon[Sync[F]].delay(

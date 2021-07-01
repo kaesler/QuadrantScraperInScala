@@ -13,18 +13,21 @@ object Main extends IOApp:
 
   override def run(args: List[String]): IO[ExitCode] =
     for
-      username          <- IO.print("Username: ") *> IO.readLine
-      password          <- IO.print("Password: ") *> IO.readLine
-      docsOnSite        <- Quadrant.resource[IO](username, password).use(_.docUris)
+      username <- IO.print("Username: ") *> IO.readLine
+      password <- IO.print("Password: ") *> IO.readLine
+
+      docsOnSite        <- Discoverer.resource[IO](username, password).use(_.docUris)
       _                 <- IO.println("On site")
       _                 <- IO.println(docsOnSite.mkString("\n"))
       docsAlreadyCopied <- DocRepo.create[IO].contents
       _                 <- IO.println("Already copied")
       _                 <- IO.println(docsAlreadyCopied.mkString("\n"))
-      toBeDownloaded = docsOnSite -- docsAlreadyCopied
-      _ <- IO.println("To be downloaded")
-      _ <- IO.println(toBeDownloaded.mkString("\n"))
-    yield ExitCode.Success
 
-// Next:
-//  - Downloader: fetches them and stores them
+      toBeDownloaded = docsOnSite -- docsAlreadyCopied
+      _ <-
+        if (toBeDownloaded.isEmpty) then IO.println("No new content")
+        else
+          IO.println("To be downloaded") *>
+            IO.println(toBeDownloaded.mkString("\n")) *>
+            Downloader.resource[IO].use(_.downloadDocs(toBeDownloaded.toList))
+    yield ExitCode.Success
