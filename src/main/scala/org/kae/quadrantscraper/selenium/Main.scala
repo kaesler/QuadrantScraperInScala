@@ -13,15 +13,17 @@ object Main extends IOApp:
 
   override def run(args: List[String]): IO[ExitCode] =
     for
-      username <- IO.print("Username: ") *> IO.readLine
-      password <- IO.print("Password: ") *> IO.readLine
-      map      <- Quadrant.resource[IO](username, password).use(_.pdfsByYear)
-      set = map.toSet
-      _ <- IO.println(set)
-    // TODO:
-    //    - compute set already downloaded
-    //    - compute set difference
-    //    - do downloads
+      username          <- IO.print("Username: ") *> IO.readLine
+      password          <- IO.print("Password: ") *> IO.readLine
+      docsOnSite        <- Quadrant.resource[IO](username, password).use(_.docUris)
+      _                 <- IO.println("On site")
+      _                 <- IO.println(docsOnSite.mkString("\n"))
+      docsAlreadyCopied <- DocRepo.create[IO].contents
+      _                 <- IO.println("Already copied")
+      _                 <- IO.println(docsAlreadyCopied.mkString("\n"))
+      toBeDownloaded = docsOnSite -- docsAlreadyCopied
+      _ <- IO.println("To be downloaded")
+      _ <- IO.println(toBeDownloaded.mkString("\n"))
     yield ExitCode.Success
 
 // Next:

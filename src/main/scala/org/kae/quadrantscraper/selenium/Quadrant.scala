@@ -22,10 +22,18 @@ trait Quadrant[F[_] : Applicative]:
       .traverse(pdfsForYear)
       .map(years.zip(_).toMap)
 
+  def docUris: F[Map[DocId, Uri]] =
+    pdfsByYear.map { pairs =>
+      for
+        (year, uris) <- pairs
+        uri <- uris.toList
+        name = uri.pathSegments.segments.last.v
+      yield (DocId(year, name), uri)
+    }
 end Quadrant
 
 object Quadrant:
-  private val firstYear = 1956
+  private val firstYear = 2019 // 1956
 
   import sttp.client3.*
 
@@ -65,7 +73,7 @@ object Quadrant:
           logger.info(s"Examining year $year") *>
           summon[Sync[F]].delay {
             driver.get(s"https://quadrant.org.au/magazine/$year")
-            Thread.sleep(500)
+            Thread.sleep(200)
             // val src = driver.getPageSource
             // println(src)
             driver
