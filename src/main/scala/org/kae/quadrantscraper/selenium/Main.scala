@@ -16,8 +16,12 @@ object Main extends IOApp:
       username <- IO.print("Username: ") *> IO.readLine
       password <- IO.print("Password: ") *> IO.readLine
       map      <- Quadrant.resource[IO](username, password).use(_.pdfsByYear)
-      _        <- IO.println(map)
-    // TODO: download
+      set = map.toSet
+      _ <- IO.println(set)
+    // TODO:
+    //    - compute set already downloaded
+    //    - compute set difference
+    //    - do downloads
     yield ExitCode.Success
 
 // Next:

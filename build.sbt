@@ -12,6 +12,7 @@ lazy val root = project
       "org.jsoup"               % "jsoup"           % "1.13.1",
       "org.typelevel"          %% "log4cats-slf4j"  % "2.1.1" withSources (),
       "ch.qos.logback"          % "logback-classic" % "1.2.3",
-      "org.seleniumhq.selenium" % "selenium-java"   % "3.141.59"
+      "org.seleniumhq.selenium" % "selenium-java"   % "3.141.59",
+      "org.scalameta"          %% "munit"           % "0.7.26"
     )
   )
