@@ -29,5 +29,5 @@ object Main extends IOApp:
         else
           IO.println("To be downloaded") *>
             IO.println(toBeDownloaded.mkString("\n")) *>
-            Downloader.resource[IO].use(_.downloadDocs(toBeDownloaded.toList))
+            Downloader.resource[IO].use(_.downloadDocs(toBeDownloaded.toList.sortBy(_._1)))
     yield ExitCode.Success
