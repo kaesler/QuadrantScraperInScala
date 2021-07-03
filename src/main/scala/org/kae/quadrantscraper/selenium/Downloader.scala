@@ -5,9 +5,10 @@ import cats.effect.kernel.{Resource, Sync}
 import cats.implicits.*
 import java.nio.file.Files
 import org.typelevel.log4cats.Logger
-import sttp.client3.SttpBackend
+import scala.concurrent.duration.*
 import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import sttp.client3.quick.{asByteArrayAlways, basicRequest}
+import sttp.client3.{RequestOptions, SttpBackend, SttpClientException}
 import sttp.model.{Header, Uri}
 
 trait Downloader [F[_] : Async]:
@@ -38,13 +39,24 @@ object Downloader:
   new Downloader[F] {
     private val logger = summon[Logger[F]]
 
+    def retry[A](n: Int)(fa: => F[A]): F[A] = {
+      fa.recoverWith {
+        case ex: SttpClientException =>
+          if n == 0 then summon[Async[F]].raiseError(ex)
+          else retry(n - 1)(fa)
+      }
+    }
+
     override def downloadDoc(docId: DocId, uri: Uri): F[Unit] =
       logger.info(s"Downloading $docId...") *>
-      basicRequest
-        .headers(userAgentHeader)
-        .get(uri)
-        .response(asByteArrayAlways)
-        .send(backend)
+        retry(3)(
+          basicRequest
+            .headers(userAgentHeader)
+            .readTimeout(120.seconds)
+            .get(uri)
+            .response(asByteArrayAlways)
+            .send(backend)
+        )
         .ensure(DownloadFailed)(_.code.isSuccess)
         .flatMap { response =>
           val targetPath = DocRepo.pathFor(docId)
