@@ -19,15 +19,12 @@ object Main extends IOApp:
       docsOnSite        <- Discoverer.resource[IO](username, password).use(_.docUris)
       _                 <- IO.println("On site")
       _                 <- IO.println(docsOnSite.mkString("\n"))
-      docsAlreadyCopied <- DocRepo.create[IO].contents
-      _                 <- IO.println("Already copied")
-      _                 <- IO.println(docsAlreadyCopied.mkString("\n"))
+      alreadyDownloaded <- DocRepo.create[IO].contents
 
-      toBeDownloaded = docsOnSite -- docsAlreadyCopied
+      toBeDownloaded = docsOnSite -- alreadyDownloaded
       _ <-
         if (toBeDownloaded.isEmpty) then IO.println("No new content")
         else
-          IO.println("To be downloaded") *>
-            IO.println(toBeDownloaded.mkString("\n")) *>
+          IO.println(s"${toBeDownloaded.size} to be downloaded:") *>
             Downloader.resource[IO].use(_.downloadDocs(toBeDownloaded.toList.sortBy(_._1)))
     yield ExitCode.Success
