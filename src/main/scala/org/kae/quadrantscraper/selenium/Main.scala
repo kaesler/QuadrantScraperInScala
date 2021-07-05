@@ -31,6 +31,6 @@ object Main extends IOApp:
       .evalFilter { (docId, _) =>
         DocRepo.docNotAlreadyDownloaded[IO](docId)
       }
-      .evalMap(downloader.downloadDoc.tupled)
+      .parEvalMap(4)(downloader.downloadDoc.tupled)
       .compile
       .drain
