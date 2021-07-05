@@ -13,12 +13,6 @@ import sttp.model.{Header, Uri}
 
 trait Downloader [F[_] : Async]:
   def downloadDoc(docId: DocId, uri: Uri): F[Unit]
-
-  def downloadDocs(refs: List[(DocId, Uri)]): F[Unit] =
-    refs
-      .traverse(downloadDoc.tupled)
-      .void
-
 end Downloader
 
 object Downloader:
@@ -59,13 +53,12 @@ object Downloader:
         )
         .ensure(DownloadFailed)(_.code.isSuccess)
         .flatMap { response =>
-          val targetPath = DocRepo.pathFor(docId)
           summon[Sync[F]].delay {
+            val targetPath = DocRepo.pathFor(docId)
             Files.createDirectories(targetPath.getParent)
             Files.write(targetPath, response.body)
           }.void
         } *> logger.info(s"Downloading $docId...done")
-
   }
 
 end Downloader

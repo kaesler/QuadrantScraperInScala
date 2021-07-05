@@ -11,6 +11,7 @@ lazy val root = project
       "org.typelevel"          %% "log4cats-slf4j"  % "2.1.1" withSources (),
       "ch.qos.logback"          % "logback-classic" % "1.2.3",
       "org.seleniumhq.selenium" % "selenium-java"   % "3.141.59",
-      "org.scalameta"          %% "munit"           % "0.7.26"
+      "org.scalameta"          %% "munit"           % "0.7.26",
+      "co.fs2"                 %% "fs2-core"        % "3.0.6"
     )
   )

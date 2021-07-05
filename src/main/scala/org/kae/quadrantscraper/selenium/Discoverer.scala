@@ -1,8 +1,8 @@
 package org.kae.quadrantscraper.selenium
 
-import cats.Applicative
-import cats.effect.{Async, Resource, Sync}
+import cats.effect.{Resource, Sync}
 import cats.implicits.*
+import fs2.Stream
 import java.nio.file.Files
 import java.time.Year
 import org.openqa.selenium.By
@@ -15,24 +15,22 @@ import sttp.model.Uri
  * Discovers what documents are available and their URIs.
  * @tparam F the effect
  */
-trait Discoverer[F[_] : Applicative]:
+trait Discoverer[F[_] : Sync]:
+
+  import Discoverer.*
+
   def docsForYear(year: Year): F[Set[Uri]]
 
-  def docsByYear: F[Map[Year, Set[Uri]]] =
-    val years = (Discoverer.firstYear to Year.now().getValue)
-      .map(Year.of)
-      .toList
-    years
-      .traverse(docsForYear)
-      .map(years.zip(_).toMap)
-
-  def docUris: F[Map[DocId, Uri]] =
-    docsByYear.map { pairs =>
-      for
-        (year, uris) <- pairs
-        uri <- uris.toList
-        name = uri.pathSegments.segments.last.v
-      yield (DocId(year, name), uri)
+  def docUriStream: Stream[F, (DocId, Uri)] =
+    years.flatMap { year =>
+      Stream.eval(docsForYear(year))
+        .flatMap { docs =>
+          Stream.fromIterator[F](docs.iterator, 1)
+        }
+        .map { uri =>
+          val name = uri.pathSegments.segments.last.v
+          ((DocId(year, name), uri))
+        }
     }
 
 end Discoverer
@@ -40,7 +38,13 @@ end Discoverer
 object Discoverer:
   private val firstYear = 1956
 
-  def resource[F[_]: Async: Logger](
+  def years[F[_]: Sync]: Stream[F, Year] = Stream.fromIterator[F](
+    (Discoverer.firstYear to Year.now().getValue)
+      .map(Year.of).iterator,
+    1
+  )
+
+  def resource[F[_]: Sync: Logger](
       username: String,
       password: String
   ): Resource[F, Discoverer[F]] =
@@ -61,7 +65,7 @@ object Discoverer:
       q       <- Resource.liftK[F](create[F](chromeDriver, username, password))
     yield q
 
-  private def create[F[*]: Sync: Logger](
+  private def create[F[_]: Sync: Logger](
     driver: ChromeDriver,
     username: String,
     password: String

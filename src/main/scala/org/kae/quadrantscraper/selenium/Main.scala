@@ -1,12 +1,11 @@
 package org.kae.quadrantscraper.selenium
 
+import cats.effect.kernel.Resource
 import cats.effect.{ExitCode, IO, IOApp}
 import cats.implicits.*
-import org.openqa.selenium.By
-import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
+import fs2.Stream
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
-import scala.jdk.CollectionConverters.*
 
 object Main extends IOApp:
   given Logger[IO] = Slf4jLogger.getLogger[IO]
@@ -16,15 +15,22 @@ object Main extends IOApp:
       username <- IO.print("Username: ") *> IO.readLine
       password <- IO.print("Password: ") *> IO.readLine
 
-      docsOnSite        <- Discoverer.resource[IO](username, password).use(_.docUris)
-      _                 <- IO.println("On site")
-      _                 <- IO.println(docsOnSite.mkString("\n"))
-      alreadyDownloaded <- DocRepo.create[IO].contents
-
-      toBeDownloaded = docsOnSite -- alreadyDownloaded
-      _ <-
-        if (toBeDownloaded.isEmpty) then IO.println("No new content")
-        else
-          IO.println(s"${toBeDownloaded.size} to be downloaded:") *>
-            Downloader.resource[IO].use(_.downloadDocs(toBeDownloaded.toList.sortBy(_._1)))
+      _ <- Resource
+        .both(
+          Discoverer.resource[IO](username, password),
+          Downloader.resource[IO]
+        )
+        .use(consumeDocStream)
     yield ExitCode.Success
+
+  def consumeDocStream(
+    discoverer: Discoverer[IO],
+    downloader: Downloader[IO]
+  ): IO[Unit] =
+    discoverer.docUriStream
+      .evalFilter { (docId, _) =>
+        DocRepo.docNotAlreadyDownloaded[IO](docId)
+      }
+      .evalMap(downloader.downloadDoc.tupled)
+      .compile
+      .drain
