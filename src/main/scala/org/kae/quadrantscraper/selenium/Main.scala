@@ -27,10 +27,10 @@ object Main extends IOApp:
     discoverer: Discoverer[IO],
     downloader: Downloader[IO]
   ): IO[Unit] =
-    discoverer.drain
+    discoverer.allDocsOnSite
       .evalFilter { (docId, _) =>
         DocRepo.docNotAlreadyDownloaded[IO](docId)
       }
-      .parEvalMap(4)(downloader.downloadDoc.tupled)
+      .parEvalMapUnordered(4)(downloader.downloadDoc.tupled)
       .compile
       .drain
