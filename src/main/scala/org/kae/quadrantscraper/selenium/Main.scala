@@ -27,7 +27,7 @@ object Main extends IOApp:
     discoverer: Discoverer[IO],
     downloader: Downloader[IO]
   ): IO[Unit] =
-    discoverer.docUriStream
+    discoverer.drain
       .evalFilter { (docId, _) =>
         DocRepo.docNotAlreadyDownloaded[IO](docId)
       }

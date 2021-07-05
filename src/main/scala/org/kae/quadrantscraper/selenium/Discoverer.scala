@@ -21,7 +21,7 @@ trait Discoverer[F[_]: Sync]:
 
   def docsForYear(year: Year): F[Set[Uri]]
 
-  def docUriStream: Stream[F, (DocId, Uri)] =
+  def allDocsOnSite: Stream[F, (DocId, Uri)] =
     years.flatMap { year =>
       Stream
         .eval(docsForYear(year))
@@ -40,7 +40,7 @@ object Discoverer:
   private val firstYear = 1956
 
   def years[F[_]: Sync]: Stream[F, Year] = Stream.fromIterator[F](
-    (Discoverer.firstYear to Year.now().getValue)
+    (Discoverer.firstYear to Year.now.getValue)
       .map(Year.of)
       .iterator,
     1
@@ -99,15 +99,22 @@ object Discoverer:
     summon[Sync[F]].delay {
       driver.get("https://quadrant.org.au/my-account/")
       // TODO: do better
-      Thread.sleep(1000)
-      val username = driver.findElement(By.name("username"))
-      username.sendKeys(myUsername)
-      val password = driver.findElement(By.name("password"))
-      password.sendKeys(myPassword)
-      val button = driver.findElement(By.name("login"))
-      button.click
+      Thread.sleep(500)
+
+      driver
+        .findElement(By.name("username"))
+        .sendKeys(myUsername)
+
+      driver
+        .findElement(By.name("password"))
+        .sendKeys(myPassword)
+
+      driver
+        .findElement(By.name("login"))
+        .click
+
       // TODO: do better by polling for the logged-in cookie
-      Thread.sleep(1000)
+      Thread.sleep(500)
     } *> summon[Logger[F]].info("Logged in")
 
 end Discoverer
