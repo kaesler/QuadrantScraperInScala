@@ -33,4 +33,7 @@ object Main extends IOApp:
       }
       .parEvalMapUnordered(4)(downloader.downloadDoc.tupled)
       .compile
-      .drain
+      .count
+      .flatMap { n =>
+        summon[Logger[IO]].info(s"$n downloaded")
+      }
