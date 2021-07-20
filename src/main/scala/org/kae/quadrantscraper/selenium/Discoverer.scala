@@ -22,7 +22,7 @@ trait Discoverer[F[_]: Sync]:
   def docsForYear(year: Year): F[Set[Uri]]
 
   def allDocsOnSite: Stream[F, (DocId, Uri)] =
-    years.flatMap { year =>
+    yearsPublished.flatMap { year =>
       Stream
         .eval(docsForYear(year))
         .flatMap { docs =>
@@ -39,7 +39,7 @@ end Discoverer
 object Discoverer:
   private val firstYear = 1956
 
-  def years[F[_]: Sync]: Stream[F, Year] = Stream.fromIterator[F](
+  def yearsPublished[F[_]: Sync]: Stream[F, Year] = Stream.fromIterator[F](
     (Discoverer.firstYear to Year.now.getValue)
       .map(Year.of)
       .iterator,
