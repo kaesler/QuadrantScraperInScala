@@ -33,12 +33,11 @@ object Downloader:
     new Downloader[F] {
       private val logger = summon[Logger[F]]
 
-      def retry[A](n: Int)(fa: => F[A]): F[A] = {
+      def retry[A](n: Int)(fa: => F[A]): F[A] =
         fa.recoverWith { case ex: SttpClientException =>
           if n == 0 then summon[Async[F]].raiseError(ex)
           else retry(n - 1)(fa)
         }
-      }
 
       override def downloadDoc(docId: DocId, uri: Uri): F[Unit] =
         logger.info(s"Downloading $docId...") *>
