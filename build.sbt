@@ -12,6 +12,6 @@ lazy val root = project
       "ch.qos.logback"          % "logback-classic" % "1.2.6",
       "org.seleniumhq.selenium" % "selenium-java"   % "4.0.0",
       "org.scalameta"          %% "munit"           % "0.7.29",
-      "co.fs2"                 %% "fs2-core"        % "3.1.6"
+      "co.fs2"                 %% "fs2-core"        % "3.2.1"
     )
   )
