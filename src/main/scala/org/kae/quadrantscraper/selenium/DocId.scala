@@ -4,8 +4,8 @@ import java.time.Year
 
 case class DocId(
   year: Year,
-  name: String
+  fileName: String
 )
 
 object DocId:
-  given Ordering[DocId] = Ordering.by(i => (i.year, i.name))
+  given Ordering[DocId] = Ordering.by(i => (i.year, i.fileName))

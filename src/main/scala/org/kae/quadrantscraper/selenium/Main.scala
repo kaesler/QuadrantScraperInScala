@@ -20,17 +20,15 @@ object Main extends IOApp:
           Discoverer.resource[IO](username, password),
           Downloader.resource[IO]
         )
-        .use(consumeDocStream)
+        .use(discoverAndDownloadDocs)
     yield ExitCode.Success
 
-  def consumeDocStream(
+  private def discoverAndDownloadDocs(
     discoverer: Discoverer[IO],
     downloader: Downloader[IO]
   ): IO[Unit] =
     discoverer.allDocsOnSite
-      .evalFilter { (docId, _) =>
-        DocRepo.docNotAlreadyDownloaded[IO](docId)
-      }
+      .evalFilter { (docId, _) => DocRepo.docNotAlreadyDownloaded[IO](docId) }
       .parEvalMapUnordered(4)(downloader.downloadDoc.tupled)
       .compile
       .count
