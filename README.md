@@ -1,8 +1,5 @@
-## sbt project compiled with Scala 3
+## Sync PDFs of the magazine to my Dropbox
 
-### Usage
+Uses Selenium headless browser to login and enumerate all magazine issue PDFs as a stream of URLs.
 
-This is a normal sbt project. You can compile code with `sbt compile`, run it with `sbt run`, and `sbt console` will start a Scala 3 REPL.
-
-For more information on the sbt-dotty plugin, see the
-[dotty-example-project](https://github.com/lampepfl/dotty-example-project/blob/master/README.md).
+Processes the stream with limited parallelism, downloading any PDFs not yet in my Dropbox.
