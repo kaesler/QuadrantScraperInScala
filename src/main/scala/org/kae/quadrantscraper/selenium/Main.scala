@@ -6,6 +6,7 @@ import cats.implicits.*
 import fs2.Stream
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
+import sttp.model.Uri
 
 object Main extends IOApp:
   given Logger[IO] = Slf4jLogger.getLogger[IO]
@@ -27,11 +28,21 @@ object Main extends IOApp:
     discoverer: Discoverer[IO],
     downloader: Downloader[IO]
   ): IO[Unit] =
-    discoverer.allDocsOnSite
-      .evalFilter { (docId, _) => DocRepo.docNotAlreadyDownloaded[IO](docId) }
-      .parEvalMapUnordered(4)(downloader.downloadDoc.tupled)
+    discoverer.allDocsOnSite.keepThoseNotAlreadyDownloaded
+      .downloadEach(4, downloader)
       .compile
       .count
       .flatMap { n =>
         summon[Logger[IO]].info(s"$n downloaded")
       }
+
+  extension (underlying: Stream[IO, (DocId, Uri)])
+    def keepThoseNotAlreadyDownloaded: Stream[IO, (DocId, Uri)] =
+      underlying.evalFilter { (docId, _) =>
+        DocRepo.docNotAlreadyDownloaded[IO](docId)
+      }
+    def downloadEach(
+      maxConcurrency: Int,
+      downloader: Downloader[IO]
+    ): Stream[IO, Unit] =
+      underlying.parEvalMapUnordered(maxConcurrency)(downloader.downloadDoc.tupled)
