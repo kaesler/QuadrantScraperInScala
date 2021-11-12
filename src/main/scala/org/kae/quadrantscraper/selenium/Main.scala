@@ -28,8 +28,9 @@ object Main extends IOApp:
     discoverer: Discoverer[IO],
     downloader: Downloader[IO]
   ): IO[Unit] =
-    discoverer.allDocsOnSite.keepThoseNotAlreadyDownloaded
-      .downloadEach(4, downloader)
+    discoverer.allDocsOnSite
+      .keepThoseNotAlreadyDownloaded
+      .downloadEach(downloader, maxConcurrency = 4)
       .compile
       .count
       .flatMap { n =>
@@ -42,7 +43,7 @@ object Main extends IOApp:
         DocRepo.docNotAlreadyDownloaded[IO](docId)
       }
     def downloadEach(
-      maxConcurrency: Int,
-      downloader: Downloader[IO]
+      downloader: Downloader[IO],
+      maxConcurrency: Int
     ): Stream[IO, Unit] =
       underlying.parEvalMapUnordered(maxConcurrency)(downloader.downloadDoc.tupled)
