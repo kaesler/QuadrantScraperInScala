@@ -13,5 +13,13 @@ lazy val root = project
       "org.seleniumhq.selenium" % "selenium-java"   % "4.0.0",
       "org.scalameta"          %% "munit"           % "0.7.29",
       "co.fs2"                 %% "fs2-core"        % "3.2.1"
+    ),
+    scalacOptions := Seq(
+      "-feature",
+      "-deprecation",
+      "-Xfatal-warnings",
+      "-unchecked",
+      "-language:implicitConversions",
+      "-source:future"
     )
   )
