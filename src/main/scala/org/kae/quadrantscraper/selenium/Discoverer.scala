@@ -42,7 +42,8 @@ object Discoverer:
   def yearsPublished[F[_]: Sync]: Stream[F, Year] = Stream.fromIterator[F](
     (Discoverer.firstYear to Year.now.getValue)
       .map(Year.of)
-      .iterator,
+      // Note: find newest ones first.
+      .reverseIterator,
     1
   )
 
