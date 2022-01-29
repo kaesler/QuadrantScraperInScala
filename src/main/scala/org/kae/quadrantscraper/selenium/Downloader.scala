@@ -23,8 +23,12 @@ object Downloader:
 
   def resource[F[_]: Async: Logger]: Resource[F, Downloader[F]] =
     for
-      backend <- Resource.make(AsyncHttpClientCatsBackend[F]())(_.close())
-      q       <- Resource.liftK[F](create(backend).pure[F])
+      backend <- Resource.make(AsyncHttpClientCatsBackend[F]()) { backend =>
+        backend.close()
+          // Silence any errors here.
+          .handleErrorWith(_ => ().pure)
+      }
+      q <- Resource.liftK[F](create(backend).pure[F])
     yield q
 
   private def create[F[_]: Async: Logger](

@@ -30,7 +30,7 @@ trait Discoverer[F[_]: Sync]:
         }
         .map { uri =>
           val name = uri.pathSegments.segments.last.v
-          ((DocId(year, name), uri))
+          (DocId(year, name), uri)
         }
     }
 
@@ -64,7 +64,10 @@ object Discoverer:
               )
           )
         )
-      )(driver => summon[Sync[F]].delay(driver.quit))
+      ) { driver =>
+        summon[Sync[F]].delay(driver.quit)
+          .handleErrorWith(_ => ().pure)
+      }
       q <- Resource.liftK[F](create[F](chromeDriver, username, password))
     yield q
 
@@ -75,7 +78,7 @@ object Discoverer:
   ): F[Discoverer[F]] =
     login[F](driver, username, password) *>
       new Discoverer[F] {
-        val logger = summon[Logger[F]]
+        private val logger = summon[Logger[F]]
 
         override def docsForYear(year: Year): F[Set[Uri]] =
           logger.info(s"Examining year $year") *>
@@ -112,7 +115,7 @@ object Discoverer:
 
       driver
         .findElement(By.name("login"))
-        .click
+        .click()
 
       // TODO: do better by polling for the logged-in cookie
       Thread.sleep(500)
