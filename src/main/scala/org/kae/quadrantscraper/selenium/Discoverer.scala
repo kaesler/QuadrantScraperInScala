@@ -65,7 +65,7 @@ object Discoverer:
           )
         )
       ) { driver =>
-        summon[Sync[F]].delay(driver.quit)
+        summon[Sync[F]].delay(driver.quit())
           .handleErrorWith(_ => ().pure)
       }
       q <- Resource.liftK[F](create[F](chromeDriver, username, password))
