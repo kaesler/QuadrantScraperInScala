@@ -6,7 +6,7 @@ import cats.implicits.*
 import java.nio.file.Files
 import org.typelevel.log4cats.Logger
 import scala.concurrent.duration.*
-import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
+import sttp.client3.armeria.cats.ArmeriaCatsBackend
 import sttp.client3.quick.{asByteArrayAlways, basicRequest}
 import sttp.client3.{RequestOptions, SttpBackend, SttpClientException}
 import sttp.model.{Header, Uri}
@@ -23,12 +23,8 @@ object Downloader:
 
   def resource[F[_]: Async: Logger]: Resource[F, Downloader[F]] =
     for
-      backend <- Resource.make(AsyncHttpClientCatsBackend[F]()) { backend =>
-        backend.close()
-          // Silence any errors here.
-          .handleErrorWith(_ => ().pure)
-      }
-      q <- Resource.liftK[F](create(backend).pure[F])
+      backend <- ArmeriaCatsBackend.resource[F]()
+      q       <- Resource.liftK[F](create(backend).pure[F])
     yield q
 
   private def create[F[_]: Async: Logger](
