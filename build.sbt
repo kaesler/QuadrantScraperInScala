@@ -3,7 +3,7 @@ lazy val root = project
   .settings(
     name         := "QuadrantScraper",
     version      := "0.1.0",
-    scalaVersion := "3.2.0",
+    scalaVersion := "3.2.1",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client3" %% "core" % "3.8.3",
       "com.softwaremill.sttp.client3" %% "armeria-backend-cats" % "3.8.3",
