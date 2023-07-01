@@ -9,7 +9,9 @@ trait DocRepo[F[_]]:
 end DocRepo
 
 object DocRepo:
-  private val root: Path = File("/Users/kevinesler/Dropbox/Reading/Periodicals/Quadrant/").toPath
+  private val root: Path = File(
+    "/Users/kevinesler/Dropbox/3-Resources/Reading/Periodicals/Quadrant/"
+  ).toPath
 
   def pathFor(docId: DocId): Path =
     root.resolve(s"${docId.year.toString}/${docId.fileName}")
