@@ -51,7 +51,7 @@ object Downloader:
           )
             .ensure(DownloadFailed)(_.code.isSuccess)
             .flatMap { response =>
-              summon[Sync[F]].delay {
+              summon[Sync[F]].blocking {
                 val targetPath = DocRepo.pathFor(docId)
                 Files.createDirectories(targetPath.getParent)
                 Files.write(targetPath, response.body)

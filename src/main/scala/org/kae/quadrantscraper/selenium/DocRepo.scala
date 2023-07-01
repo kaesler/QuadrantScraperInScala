@@ -17,6 +17,6 @@ object DocRepo:
     root.resolve(s"${docId.year.toString}/${docId.fileName}")
 
   def docNotAlreadyDownloaded[F[_]: Sync](docId: DocId): F[Boolean] =
-    summon[Sync[F]].delay(!pathFor(docId).toFile.isFile)
+    summon[Sync[F]].blocking(!pathFor(docId).toFile.isFile)
 
 end DocRepo

@@ -53,7 +53,7 @@ object Discoverer:
   ): Resource[F, Discoverer[F]] =
     for
       chromeDriver <- Resource.make(
-        summon[Sync[F]].delay(
+        summon[Sync[F]].blocking(
           ChromeDriver(
             ChromeOptions()
               .addArguments(
@@ -65,7 +65,7 @@ object Discoverer:
           )
         )
       ) { driver =>
-        summon[Sync[F]].delay(driver.quit())
+        summon[Sync[F]].blocking(driver.quit())
           .handleErrorWith(_ => ().pure)
       }
       q <- Resource.liftK[F](create[F](chromeDriver, username, password))
@@ -82,7 +82,7 @@ object Discoverer:
 
         override def docsForYear(year: Year): F[Set[Uri]] =
           logger.info(s"Examining year $year") *>
-            summon[Sync[F]].delay {
+            summon[Sync[F]].blocking {
               driver.get(s"https://quadrant.org.au/magazine/$year")
               Thread.sleep(200)
               driver
@@ -100,7 +100,7 @@ object Discoverer:
     myUsername: String,
     myPassword: String
   ): F[Unit] =
-    summon[Sync[F]].delay {
+    summon[Sync[F]].blocking {
       driver.get("https://quadrant.org.au/my-account/")
       // TODO: do better
       Thread.sleep(500)
